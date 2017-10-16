@@ -12,6 +12,12 @@
   fill: none;
 }
 
+.sublines {
+  stroke: white;
+  stroke-width: 0.2px;
+  fill: none;
+}
+
 .outline {
   stroke: red;
   fill: none;
@@ -83,17 +89,36 @@ function graticule10(step) {
 }
 
 function getAngleToNextMeridian(coords, step, projection) {
-  var mer = coords[1] + 20;
-  var nc = [coords[0], mer];
+  var nextLong = [coords[0] + 20, coords[1]];
+
   var A = projection(coords);
-  var B = projection(nc);
+  var B = projection(nextLong);
 
   // console.log(A, B, coords, mer);
-  var adj = B[0] - A[0];
-  var opp = A[1] - B[1];
-  var angle = (Math.atan(opp/adj), opp, adj);
-  return Number.isFinite(angle) ? angle : 0;
+  var opp = B[0] - A[0];
+  var adj = B[1] - A[1];
+
+  var angle = Math.atan(opp/adj);
+  if (Number.isFinite(angle)) {
+    return [angle, opp, adj];
+  }
+  return 0;
+  // var angle = ;    //, opp, adj);
+  // // console.log(coords);
+  // if (coords[0] == 40) {
+  //   console.log('Angle', angle, coords, A, B, opp, adj);
+  // }
+  // return ? angle : 0;
 }
+
+function getPointToNextMeridian(coords, step, projection) {
+  var nextLong = [coords[0] + step, coords[1]];
+
+  // var A = projection(coords);
+  var B = projection(nextLong);
+  return B;
+}
+
 
 function svgTrans(rev) {
   return 'translate(' + rev[0] + ',' + rev[1] + ') ';
@@ -115,8 +140,13 @@ var projection = d3.geo.stereographic()
 var path = d3.geo.path().projection(projection);
 
 var step = 20;
-var graticule = graticule10(step);   // d3.geo.graticule()
-  // .step([step, step]);
+// var graticule = graticule10(step);
+var graticule = d3.geo.graticule();
+graticule.step([step, step]);
+graticule.majorStep([90, 360]);   // removes graticule lines from arctic
+
+var minorGraticule = d3.geo.graticule();
+minorGraticule.step([5, 5]);
 
 var svg = d3.select("body").append("svg")
     .attr("width", width)
@@ -130,10 +160,19 @@ svg.append("path")
   .attr("d", path);
 
 svg.selectAll('path.lines')
-  .data([graticule])
+  .data(graticule.lines())
   .enter()
   .append("path")
   .attr("class", "lines")
+  .attr("d", path)
+  // .exit()
+;
+
+svg.selectAll('path.sublines')
+  .data(minorGraticule.lines())    // .lines())
+  .enter()
+  .append("path")
+  .attr("class", "sublines")
   .attr("d", path)
   // .exit()
 ;
@@ -158,6 +197,20 @@ for (var i = -180; i <= 180; i+=step) {
     latitudes.push(p);
   }
 }
+
+// svg.selectAll('circle')
+//   .data(latitudes)
+//   .enter()
+//   .append('circle')
+//   .attr('class', 'checkpoint')
+//   .attr('r', 10)
+//   .attr('transform', function(d) {
+//     var p = getPointToNextMeridian(d.coordinates, 20, projection);
+//     var lon = d.coordinates[0];
+//     var lat = d.coordinates[1]
+//     return svgTrans(p);
+//   })
+// ;
 
 svg.selectAll('text')
   .data(latitudes)
@@ -206,14 +259,14 @@ svg.selectAll('text')
   .attr('transform', function(d) {
     var lon = d.coordinates[0];
     var lat = d.coordinates[1]
-    var p = [lon + 1, lat >= 0 ? lat + 1 : lat +1];
+    // var p = [lon + 1, lat >= 0 ? lat + 1 : lat +1];
+
     // console.log(p);
+    // var rev = projection(p);
 
-    var rev = projection(p);
-
-    // var rev = projection(d.coordinates);
+    var rev = projection(d.coordinates);
     if (Number.isFinite(rev[0]) && Number.isFinite(rev[1])) {
-      var angle = getAngleToNextMeridian(p, step, projection);
+      var angle = getAngleToNextMeridian(d.coordinates, step, projection);
       return svgTrans(rev) + svgRot(angle);
     }
   })
