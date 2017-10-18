@@ -1,26 +1,27 @@
 function getAngleToNextMeridian(coords, step, projection) {
-  var nextLong = [coords[0] + 20, coords[1]];
-
-  var A = projection(coords);
-  var B = projection(nextLong);
-
-  // console.log(A, B, coords, mer);
-  var opp = B[0] - A[0];
-  var adj = B[1] - A[1];
-
-  var angle = Math.atan(opp/adj);
-  if (Number.isFinite(angle)) {
-    var res = (angle, opp, adj);
-    console.log(res);
-    return res;
-  }
   return 0;
-  // var angle = ;    //, opp, adj);
-  // // console.log(coords);
-  // if (coords[0] == 40) {
-  //   console.log('Angle', angle, coords, A, B, opp, adj);
+  // var nextLong = [coords[0] + 20, coords[1]];
+  //
+  // var A = projection(coords);
+  // var B = projection(nextLong);
+  //
+  // // console.log(A, B, coords, mer);
+  // var opp = B[0] - A[0];
+  // var adj = B[1] - A[1];
+  //
+  // var angle = Math.atan(opp/adj);
+  // if (Number.isFinite(angle)) {
+  //   var res = (angle, opp, adj);
+  //   // console.log(res);
+  //   return res;
   // }
-  // return ? angle : 0;
+  // return 0;
+  // // var angle = ;    //, opp, adj);
+  // // // console.log(coords);
+  // // if (coords[0] == 40) {
+  // //   console.log('Angle', angle, coords, A, B, opp, adj);
+  // // }
+  // // return ? angle : 0;
 }
 
 function getPointToNextMeridian(coords, step, projection) {
@@ -187,7 +188,12 @@ svg.selectAll("text")
 svg.append("path")
   .datum(graticule.outline)
   .attr("class", "graticule outline")
-  .attr("d", path);
+  .attr("d", path)
+  .attr("display", function(d) {
+    window.ddd = this;
+    console.log("Display", this);
+  })
+;
 
 // svg.append("path")
 //   .data([arc])
