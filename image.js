@@ -1,53 +1,21 @@
 var text = "Lorem ipsum dolor";
 
-function makeTextImage(text, klass, parent) {
-  var svg = d3.select('body').insert('svg');
-  var textn = svg.insert('text');
-  textn
-    .text(text)
-    .attr('class', klass)
-    .attr('dx', 0)
-    .attr('text-anchor', 'start')
-  ;
-  var bbox = textn.node().getBBox();
-  textn.attr('dy', bbox.height);
-  svg
-    // .attr('height', bbox.height + bbox.height/10)   // account for text symbols under
-    // .attr('width', bbox.width)
-  ;
-  console.log("BBox", bbox);
-  var url = serialize(svg);
+var width = 960;
+var height = 500;
+var step = [20, 20];
 
-  return url;
-
-  // var img = parent.insert('image')
-  //   .attr('href', url)
-  //   .attr('dx', 0)
-  //   .attr('dy', 0)
-  // ;
-  //
-  // return img
-}
-
-function serialize(svg) {
-  // var copy = svg.cloneNode(true);
-
-  var node = svg.node();
-  var DOMURL = window.URL || window.webkitURL || window;
-
-  var data = (new XMLSerializer()).serializeToString(node);
-  var svgBlob = new Blob([data], {type: "image/svg+xml;charset=utf-8"});
-  var url = DOMURL.createObjectURL(svgBlob);
-
-  return url;
-}
-
-var width = 960,
-    height = 500;
+var graticule = d3.geo.graticule();
+graticule.step(step);
 
 var projection = d3.geo.stereographic() ;
-
 projection
+  .scale(345)
+  .rotate([0, 0])
+  .translate([width / 2, height / 2])
+  .clipAngle(90);
+
+var mercatproj = d3.geo.mercator();
+mercatproj
   .scale(345)
   .rotate([0, 0])
   .translate([width / 2, height / 2])
@@ -55,18 +23,14 @@ projection
 
 var path = d3.geo.path().projection(projection);
 
-var graticule = d3.geo.graticule();
-
-var tile = d3.tile()
-  .size([width, height])
-;
-
 var svg = d3.select("body")
   .append("svg")
   .attr("width", width)
   .attr("height", height);
 
-d3.json("/countries.geo.json", function(error, world) {
+d3.json("/countries.geo.json", main);
+
+function main(error, world) {
   var countries = world.features;
   console.log(countries);
 
@@ -87,33 +51,84 @@ d3.json("/countries.geo.json", function(error, world) {
     .attr("d", path)
   ;
 
-  var raster = svg.append('g');
+  var raster = svg.append("g");
+  var image = raster.insert("image");
 
-  var tiles = tile
-    .scale(345)
-    .translate([width / 2, height / 2])
-  ();
-  var image = raster
-    // .attr("transform", stringify(tiles.scale, tiles.translate))
-    .selectAll("image")
-    .data(tiles, function(d) { return d; });
+  makeTextImage(text, "label", function(url) {
+    image.attr("href", url);
+  });
 
-  image.enter().append("image")
-      .attr("xlink:href", function(d) {
-        return makeTextImage(text, 'label', svg);
-        // return "http://" + "abc"[d[1] % 3] + ".tile.openstreetmap.org/" + d[2] + "/" + d[0] + "/" + d[1] + ".png";
-      })
-      .attr("x", function(d) { return d[0] * 256; })
-      .attr("y", function(d) { return d[1] * 256; })
-      .attr("width", 256)
-      .attr("height", 256);
+}
 
-  // var textimg = makeTextImage(text, 'label', svg);
+// function rescaleImageToMercatorCoords(){
+// }
 
-});
+function makeTextImage(text, klass, callback) {   // , parent
+  // creates an image with text, returns it as data URL
+  var svg = d3.select("body").insert("svg");
+  var textn = svg.insert("text");
+  textn
+    .text(text)
+    .attr("class", klass)
+    .attr("dx", 0)
+    .attr("text-anchor", "start")
+    .attr("style", "fill: black; font-size: 1em; font-family:Arial,Helvetica;")
+  ;
+  var bbox = textn.node().getBBox();
+  textn.attr("dy", bbox.height);
+  svg
+    .attr("height", bbox.height - bbox.y)   // account for text symbols under
+    .attr("width", bbox.width)
+  ;
+  serialize(svg, callback);
+}
 
 
+function serialize(svg, callback) {
+  // var copy = svg.cloneNode(true);
 
+  var node = svg.node();
+  var width = svg.attr("width");
+  var height = svg.attr("height");
+  // console.log('width', width, 'height', height);
+
+  var DOMURL = window.URL || window.webkitURL || window;
+
+  var data = (new XMLSerializer()).serializeToString(node);
+  // var data = svg.node().outerHTML;
+  // console.log("data", data);
+  var svgBlob = new Blob([data], {type: "image/svg+xml;charset=utf-8"});
+  var url = DOMURL.createObjectURL(svgBlob);
+
+  var canvas = d3.select("body").insert("canvas");
+  canvas.attr("width", width).attr("height", height);
+  var ctx = canvas.node().getContext("2d");
+
+  var img = new Image;
+  img.onload = function () {
+    // console.log(ctx);
+    ctx.drawImage(this, 0, 0);
+    DOMURL.revokeObjectURL(url);
+    var url = canvas.node().toDataURL();
+    console.log("url", url);
+    callback(url);
+  };
+  img.src = url;
+}
+
+
+// var tile = d3.tile()
+//   .size([width, height])
+// ;
+
+
+// var tiles = tile
+//   .scale(345)
+//   .translate([width / 2, height / 2])();
+// var image = raster
+//   // .attr("transform", stringify(tiles.scale, tiles.translate))
+//   .selectAll("image")
+//   .data(tiles, function(d) { return d; });
 
 
 // textimg.attr('dy', textimg.height());
